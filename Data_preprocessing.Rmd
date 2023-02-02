@@ -97,7 +97,7 @@ Extracting data from 2021-01-01 to 2022-03-31 as training data, and save it into
 newdata_train=select_date('2021-01-01', '2022-03-31')
 newdata_train=na_interpolation(newdata_train)
 newdata_train1=week_data(newdata_train)
-write.csv(newdata_train1, 'training_data.csv')
+
 ```
 
 # Selecting testing data by date
@@ -107,5 +107,10 @@ Extracting data from 2021-01-01 to 2022-04-31 as testing data, and save it into 
 newdata_test=select_date('2021-01-01', '2022-04-31')
 newdata_test=na_interpolation(newdata_test)
 newdata_test1=week_data(newdata_test)
-write.csv(newdata_test1, 'test_data.csv')
 ```
+
+```{r}
+write.csv(newdata_train1, 'training_data.csv',row.names = FALSE)
+write.csv(newdata_test1, 'test_data.csv',row.names = FALSE)
+```
+
