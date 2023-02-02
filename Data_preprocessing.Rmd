@@ -67,7 +67,8 @@ return(df2)
 ```
 
 
-# data from 2021-01-01 to 2022-03-31
+# Selecting training data by date
+data from 2021-01-01 to 2022-03-31
 Extracting data from 2021-01-01 to 2022-03-31 as training data, and save it into data file.
 ```{r}
 newdata_train=select_date('2021-01-01', '2022-03-31')
@@ -75,7 +76,8 @@ newdata_train=na_interpolation(newdata_train)
 write.csv(newdata_train, 'training_data')
 ```
 
-# data from 2021-01-01 to 2022-04-31
+# Selecting testing data by date
+data from 2021-01-01 to 2022-04-31
 Extracting data from 2021-01-01 to 2022-04-31 as testing data, and save it into data file.
 ```{r}
 newdata_test=select_date('2021-01-01', '2022-04-31')
