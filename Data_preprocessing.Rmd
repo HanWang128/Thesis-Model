@@ -1,0 +1,84 @@
+---
+title: "Generating COVID data"
+---
+```{r,include=FALSE}
+library(plyr)
+library(imputeTS)
+library(dplyr)
+library(tidyverse)
+library(forcats)
+library(stringr)
+library(base)
+library(sf)
+library(scales)
+library(lubridate)
+library(aTSA)
+library(tseries)
+library(forecast)
+library(CADFtest)
+library(vars)
+library(urca)
+library(lattice)
+library(urca)
+library(ggplot2)
+library(MASS)
+```
+
+## Read the data files
+
+The research process involves reading four data files: government stringency_index data, mobility data, weather data, and COVID related data from Our World in data. The goal is to extract valuable information from these files in order to generate a COVID data table. The research aim was to understand the impact of these factors on the spread of COVID-19 and to inform public health decision-making.
+
+```{r}
+covid_stringency=read.csv('COVID_stringency_index.csv', sep=',')
+
+covid_mobility=read.csv('COVID_mobility.csv', sep=',')
+
+covid_variant=read.csv('COVID_varianten.csv' ,sep=';')
+
+fulldata <- read.csv('owid_data.csv')
+
+weatherNL=read.csv('weatherNL.csv')
+```
+
+## Generating data
+
+The process includes extracting specific columns from each data file, including stringency_index , transition and residential values, temperature, wind speed, precipitation, humidity, new COVID cases, new COVID deaths, hospital admission, and ICU admission. 
+
+The extracted columns are then aggregated by the specific start and end date to form the final COVID data table. This data table is generated to investigate the impact on hospital admission, and ICU admission from various factors, such as stringency of public health measures, mobility patterns, weather conditions, and COVID cases, deaths. 
+
+```{r}
+select_date=function(start_date, end_date){
+
+stringency=covid_stringency%>%filter(location=='Netherlands')%>%filter(date>=start_date)%>%filter(date<=end_date)%>%dplyr::select(date,stringency_index)
+
+#mobility data
+mobility=covid_mobility%>%filter(Entity=='Netherlands')%>% filter(Day>=start_date)%>%filter(Day<= end_date)%>%dplyr::select(Day, transit_stations,residential)%>%dplyr::rename('date'='Day')
+
+#weather data
+weather=weatherNL %>% filter(datetime>=start_date)%>%filter(datetime<= end_date)%>%dplyr::select(datetime, temp, humidity, precip, windspeed)%>%dplyr::rename('date'='datetime')
+
+#aggregating data together
+NLdata1 <- fulldata %>%filter(location=="Netherlands") %>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select(date, new_cases, new_deaths, icu_patients, hosp_patients)
+
+df2 <- join_all(list(NLdata1,stringency,weather, mobility), by='date', type='left')
+
+return(df2)
+}
+```
+
+
+# data from 2021-01-01 to 2022-03-31
+Extracting data from 2021-01-01 to 2022-03-31 as training data, and save it into data file.
+```{r}
+newdata_train=select_date('2021-01-01', '2022-03-31')
+newdata_train=na_interpolation(newdata_train)
+write.csv(newdata_train, 'training_data')
+```
+
+# data from 2021-01-01 to 2022-04-31
+Extracting data from 2021-01-01 to 2022-04-31 as testing data, and save it into data file.
+```{r}
+newdata_test=select_date('2021-01-01', '2022-04-31')
+newdata_test=na_interpolation(newdata_test)
+write.csv(newdata_test, 'test_data')
+```
