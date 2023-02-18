@@ -1,0 +1,84 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(psych)
+library(corrplot)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(base)
+library(sf)
+library(scales)
+library(vars)
+library(lattice)
+library(urca)
+library(ggplot2)
+library(MASS)
+```
+
+# read file
+```{r}
+data=read.csv('new_data.csv')
+```
+
+# Data exploration
+```{r}
+describe(data)
+```
+There are 12 variables in the data with 485 observations. Including 1 date variable, 2 response variables, and 9 predictors. All variables are numeric type except variale 'date'. 
+1. date
+2. new_cases: the daily new confirmed COVID cases in Netherlands
+3. new_deaths: the daily new deaths of COVID patients in Netherlands
+4. ICU_patients: the COVID patients admitted to ICU per day in hospital
+5. Hosp_patients: the COVID patients admitted to hosptial per day
+6. stringency_index:
+7. temp: daily temperature
+8. humidity: daily humidity
+9. precip: the amount of rains per day
+10. windspeed: daily windspeed
+11. transit_stations:
+12: residential:
+
+## checking missingness
+```{r}
+sum(is.na(data))
+sum(is.na(data$icu_patients))
+sum(is.na(data$hosp_patients))
+```
+There are 18 missing values in the data, locate in ICU patients and Hospital patients columns. (The government website does not have COVID records for some days during 2021- 2022)
+
+## correlations 
+```{r}
+pairs(data[, 2:6])
+
+cor(data[, 2:12])
+
+corrplot(cor(data[, 2:12]), method = "circle",
+        title = "method = 'circle'") 
+```
+
+For hospital admission
+1.hospital admission and humidity, hospital admission and precipitation have small correlation less than 0.1
+2.hospital admission and new deaths, hospital admission and resident are highly positive correlated 
+3.hospital admission and temperature, hospital admission and transit are highly negative correlated
+
+for hospital admission: fit var model including all variables, comparing to the var model without humidity, precipitation, and wind speed.
+
+
+
+For ICU admission
+1.ICU admission and humidity, ICU admission and precipitation, ICU and wind speed have small correlation less than 0.1.
+2.ICU admission and new deaths, ICU admission and stringency, ICU admission and resident are highly positive correlated 
+3.ICU admission and temperature, ICU admission and transit are highly negative correlated
+
+for ICU admission: fit var model including all variables, comparing to the var model without humidity, precipitation and wind speed.
+
+
+new deaths highly positive correlated to stringency_index, and residential. Negative correlated to temperature and public transition.
+
+strigency_index increases, residential increases, transition decreases. (temperature has opposite relation)
+
+transit and residential as highly negative correlated.
+
