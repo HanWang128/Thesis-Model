@@ -119,5 +119,7 @@ newdata=select_date('2021-01-01', '2022-04-31')
 newdata$icu_patients=na.interp(newdata$icu_patients)
 newdata$hosp_patients=na.interp(newdata$hosp_patients)
 write.csv(newdata, 'new_data.csv',row.names = FALSE)
+
+
 ```
 
