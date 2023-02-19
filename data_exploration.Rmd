@@ -41,6 +41,8 @@ There are 12 variables in the data with 485 observations. Including 1 date varia
 11. transit_stations:
 12: residential:
 
+问题： transit 都是负数，需不需要调整从0开始 判断人们乘坐交通的变化
+
 ## checking missingness
 ```{r}
 sum(is.na(data))
@@ -81,4 +83,30 @@ new deaths highly positive correlated to stringency_index, and residential. Nega
 strigency_index increases, residential increases, transition decreases. (temperature has opposite relation)
 
 transit and residential as highly negative correlated.
+
+# Plots
+```{r}
+plot(data$new_cases) # 2022-02-07 has 380399 cases, (outlier, remove and graph again) volatity
+plot(data$new_cases[-403])
+plot(data$new_deaths)
+# more deaths at the beginning 
+plot(data$icu_patients)
+plot(data$hosp_patients)
+plot(data$stringency_index)
+plot(data$temp)
+plot(data$humidity)
+plot(data$precip)
+plot(data$windspeed)
+plot(data$transit_stations)
+plot(data$residential)
+# ICU, hosp, stringency, residential trends are similar, transition has opposite trend.
+
+```
+
+stringency 会导致lockdown， residential的变化和stringency相似， 从而影响hosp admission。
+
+
+
+summer low COVID, winter high COVID
+湿度看着和hosp admission， icu走势有点像， 风速和降雨量看不出来。
 
