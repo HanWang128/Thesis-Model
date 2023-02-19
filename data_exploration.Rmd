@@ -43,6 +43,7 @@ There are 12 variables in the data with 485 observations. Including 1 date varia
 
 问题： transit 都是负数，需不需要调整从0开始 判断人们乘坐交通的变化
 
+
 ## checking missingness
 ```{r}
 sum(is.na(data))
