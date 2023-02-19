@@ -111,3 +111,8 @@ stringency 会导致lockdown， residential的变化和stringency相似， 从�
 summer low COVID, winter high COVID
 湿度看着和hosp admission， icu走势有点像， 风速和降雨量看不出来。
 
+
+# distribution
+
+# heteroscedasicity
+
