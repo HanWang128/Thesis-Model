@@ -113,6 +113,40 @@ summer low COVID, winter high COVID
 
 
 # distribution
+```{r}
+hist(data$icu_patients)
+hist(data$hosp_patients)
+hist(data$new_cases)
+hist(data$new_deaths)
+hist(data$stringency_index)
+hist(data$temp)
+hist(data$humidity)
+hist(data$precip)
+hist(data$windspeed)
+hist(data$transit_stations)
+hist(data$residential)
+```
 
-# heteroscedasicity
+# heteroscedasticity 
+```{r}
+lm1=lm(hosp_patients~., data=data[,c(2,3,5,6,7,8,9,10,11,12)])
+summary(lm1)
+# number of new deaths, temperature, humidity, and residential have significant impact on hospital admission.
+# new deaths increases, more hospital admissions
+# temperature and humidity get higher, the less hospital admission
+# hospital admission increases as residential increases.
+
+plot(lm1)
+# heteroscedasticity detected, maybe garch model can be used in time series model (further hetero test need to be done)
+```
+
+
+# 如果将温度， 湿度， 风速降雨量等调整为categorical数据， 是否能观察出相关性
+```{r}
+data
+```
+
+```{r}
+
+```
 
