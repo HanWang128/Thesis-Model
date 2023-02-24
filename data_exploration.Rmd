@@ -31,21 +31,23 @@ data=read.csv('new_data.csv')
 ```{r}
 describe(data)
 ```
-There are 12 variables in the data with 485 observations. Including 1 date variable, 2 response variables, and 9 predictors. All variables are numeric type except variale 'date'. 
+
+There are 12 variables in the data with 485 observations. Including 1 date variable, 2 response variables, and 9 predictors. All variables are numeric type except variable 'date'. 
 1. date
 2. new_cases: the daily new confirmed COVID cases in Netherlands
 3. new_deaths: the daily new deaths of COVID patients in Netherlands
 4. ICU_patients: the COVID patients admitted to ICU per day in hospital
-5. Hosp_patients: the COVID patients admitted to hosptial per day
+5. Hosp_patients: the COVID patients admitted to hospital per day
 6. stringency_index:
 7. temp: daily temperature
 8. humidity: daily humidity
-9. precip: the amount of rains per day
-10. windspeed: daily windspeed
-11. transit_stations:
-12: residential:
+9. precipitation: the amount of rains per day
+10. winds peed: daily winds peed
+11. transit_stations:  number of visitors to transit stations has changed compared to baseline days (baseline: median value for the 5‑week period from January 3 to February 6, 2020)
+12: residential: change in duration of time spent at home. People already spend a lot of time at home, so changes in Residential are likely to be smaller.
 
-问题： transit 都是负数，需不需要调整从0开始 判断人们乘坐交通的变化
+
+
 
 
 ## checking missingness
@@ -109,12 +111,11 @@ plot(data$residential)
 
 ```
 
-stringency 会导致lockdown， residential的变化和stringency相似， 从而影响hosp admission。
-
+From the trend plot, the stringency, residential, and hospital admission have similar trend, we think that the stringency （lockdowns policy, restrictions of going out） has effect the variable Residential. Then either people can not going out then reduce the number of patients in the hospital, or the spread of virus is less that reduce the number of patients in the hospital.
 
 
 summer low COVID, winter high COVID
-湿度看着和hosp admission， icu走势有点像， 风速和降雨量看不出来。
+also humidity related to hospital admission and ICU, not a clear trend is shown for wind speed
 
 
 # distribution
