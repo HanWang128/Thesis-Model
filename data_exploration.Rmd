@@ -147,7 +147,7 @@ plot(lm1)
 ```
 
 
-# 如果将温度， 湿度， 风速降雨量等调整为categorical数据， 是否能观察出相关性
+# change temp, humidity, wind speed and precipitation to categorical variables, and observe the relations
 ```{r}
 data_cat=data
 data_cat$temp_cat_int <- discretize(data_cat$temp, method="interval", breaks=4)
