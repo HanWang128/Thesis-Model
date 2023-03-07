@@ -20,6 +20,7 @@ library(joineR)
 library(pROC)
 library(MESS)
 library(arules)
+library(fpp2)
 ```
 
 # read file
@@ -60,16 +61,18 @@ There are 18 missing values in the data, locate in ICU patients and Hospital pat
 
 ## correlations 
 ```{r}
-pairs(data[, 2:6])
+# remove the missing values
 
-cor(data[, 2:12])
+pairs(na.omit(data[, 2:6]))
 
-corrplot(cor(data[, 2:12]), method = "circle",
+cor(na.omit(data[, 2:12]))
+
+corrplot(cor(na.omit(data[, 2:12])), method = "circle",
         title = "method = 'circle'") 
 ```
-
+After removing the missing values, we plot the correlation graph
 For hospital admission
-1.hospital admission and humidity, hospital admission and precipitation have small correlation less than 0.1
+1.hospital admission and humidity,hospital admission and wind speed, hospital admission and precipitation have small correlation less than 0.1
 2.hospital admission and new deaths, hospital admission and resident are highly positive correlated 
 3.hospital admission and temperature, hospital admission and transit are highly negative correlated
 
@@ -91,16 +94,27 @@ strigency_index increases, residential increases, transition decreases. (tempera
 
 transit and residential as highly negative correlated.
 
+Since the data contains missing value, we will use interpolation methods to replace the NA values.
+
+
 # Plots
 ```{r}
 par(mfrow=c(2,2))
-plot(data$new_cases) # 2022-02-07 has 380399 cases, (outlier, remove and graph again) volatity
-plot(data$new_cases[-403])
+plot(data$new_cases) 
+# 2022-02-07 has 380399 cases, (outlier, remove and graph again) volatity
+# 2022-01-17 and 2022-02-22 have 0 and 2 new cases, we treat them as outliers. 
+# 2021-09-11 has 22 new cases, previous day and day after have over 2800 cases, treat it as outliers.
+
 plot(data$new_deaths)
+boxplot(data$new_deaths)
 # more deaths at the beginning 
+
 plot(data$icu_patients)
+boxplot(data$icu_patients) # no outliers
 plot(data$hosp_patients)
-plot(data$stringency_index)
+boxplot(data$hosp_patients) #no outliers
+
+plot(data$stringency_index) 
 plot(data$temp)
 plot(data$humidity)
 plot(data$precip)
@@ -109,175 +123,48 @@ plot(data$transit_stations)
 plot(data$residential)
 # ICU, hosp, stringency, residential trends are similar, transition has opposite trend.
 
+
 ```
 
-From the trend plot, the stringency, residential, and hospital admission have similar trend, we think that the stringency （lockdowns policy, restrictions of going out） has effect the variable Residential. Then either people can not going out then reduce the number of patients in the hospital, or the spread of virus is less that reduce the number of patients in the hospital.
-
-
-summer low COVID, winter high COVID
-also humidity related to hospital admission and ICU, not a clear trend is shown for wind speed
-
-
-# distribution
-```{r, include=FALSE}
-hist(data$icu_patients)
-hist(data$hosp_patients)
-hist(data$new_cases)
-hist(data$new_deaths)
-hist(data$stringency_index)
-hist(data$temp)
-hist(data$humidity)
-hist(data$precip)
-hist(data$windspeed)
-hist(data$transit_stations)
-hist(data$residential)
-```
-
-# heteroscedasticity 
+for the outliers in new cases variable, we replace it using na.interp()
 ```{r}
-lm1=lm(hosp_patients~., data=data[,c(2,3,5,6,7,8,9,10,11,12)])
-summary(lm1)
-# number of new deaths, temperature, humidity, and residential have significant impact on hospital admission.
-# new deaths increases, more hospital admissions
-# temperature and humidity get higher, the less hospital admission
-# hospital admission increases as residential increases.
+data$new_cases=ifelse(data$new_cases<50, NA,ifelse(data$new_cases>300000, NA, data$new_cases))
 
-plot(lm1)
-# heteroscedasticity detected, maybe garch model can be used in time series model (further hetero test need to be done)
+data$new_cases=na.interp(data$new_cases)
+data$icu_patients=na.interp(data$icu_patients)
+data$hosp_patients=na.interp(data$hosp_patients)
+
+sum(is.na(data))
 ```
-
-
-# change temp, humidity, wind speed and precipitation to categorical variables, and observe the relations
-```{r}
-data_cat=data
-data_cat$temp_cat_int <- discretize(data_cat$temp, method="interval", breaks=4)
-data_cat$temp_cat_fre <- discretize(data_cat$temp, method="frequency", breaks=4)
-data_cat$temp_cat_clu <- discretize(data_cat$temp, method="cluster", breaks=4) #KNN
-#summary(data_cat$temp_cat_int)
-#summary(data_cat$temp_cat_fre)
-#summary(data_cat$temp_cat_clu)
-# based on discretization, we used 3 different method to categorize the temperature into 4 level, select the result from KNN model
-# [-6,4): cold
-# [4,9)：cool
-# [9,14)： warm
-# [14,23]： hot
-
-data_cat$wind_cat_int <- discretize(data_cat$windspeed, method="interval", breaks=4)
-data_cat$wind_cat_fre <- discretize(data_cat$windspeed, method="frequency", breaks=4)
-data_cat$wind_cat_clu <- discretize(data_cat$windspeed, method="cluster", breaks=4) #KNN
-#summary(data_cat$wind_cat_int)
-#summary(data_cat$wind_cat_fre)
-#summary(data_cat$wind_cat_clu)
-#[7.6,19.5):low
-#[19.5,29): mid
-#[29,43.4): strong
-#[43.4,82.5]: very strong
-
-data_cat$pre_cat_int <- discretize(data_cat$precip, method="interval", breaks=4)
-data_cat$pre_cat_fre <- discretize(data_cat$precip, method="frequency", breaks=4)
-data_cat$pre_cat_clu <- discretize(data_cat$precip, method="cluster", breaks=4) #KNN
-#summary(data_cat$pre_cat_int)
-#summary(data_cat$pre_cat_fre)
-#summary(data_cat$pre_cat_clu)
-#[0,2.69)  level 1
-#[2.69,8.26) level 2 
-#[8.26,18) level 3
-#[18,31.7] level 4
-
-data_cat$hum_cat_int <- discretize(data_cat$humidity, method="interval", breaks=4)
-data_cat$hum_cat_fre <- discretize(data_cat$humidity, method="frequency", breaks=4)
-data_cat$hum_cat_clu <- discretize(data_cat$humidity, method="cluster", breaks=4) #KNN
-#summary(data_cat$hum_cat_int)
-#summary(data_cat$hum_cat_fre)
-#summary(data_cat$hum_cat_clu)
-#[46.6,68.4): level 1
-#[68.4,79.8): level 2
-#[79.8,88.3): level 3
-#[88.3,98.8]: level 4
-```
-
-# convert the numerical variables into categorical variables
-```{r}
-# should we use KNN result to categorize or using equal frequency to categorize data???
-
-# categorizing data using KNN result
-data_cat$temp_cat=ifelse(data$temp<4, 'cold', 
-                     ifelse(data$temp<9, 'cool',
-                            ifelse(data$temp<14, 'warm', 'hot')))
-data_cat$wind_cat=ifelse(data$windspeed<19.5, 'low', 
-                     ifelse(data$windspeed<29, 'mid',
-                            ifelse(data$windspeed<43.5, 'high', 'strong')))
-
-data_cat$hum_cat=ifelse(data$humidity<74.8, 'level1', 
-                     ifelse(data$humidity<81.5, 'level2',
-                            ifelse(data$humidity<86.9, 'level3', 'level4'))) # using frequency interval result
-
-data_cat$pre_cat=ifelse(data$precip<2.69, 'level1', 
-                     ifelse(data$precip<8.26, 'level2',
-                            ifelse(data$precip<18, 'level3', 'level4')))
-```
-
-# plot the categorical variables vs number of hospital patients
-```{r}
-par(mfrow=c(1,1))
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = hosp_patients, 
-                     group=temp_cat, 
-                     color=temp_cat)) +geom_point() +xlab('date')
-# clearly hot temperature results lower COVID hospital patients
-
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = hosp_patients, 
-                     group=wind_cat, 
-                     color=wind_cat)) +geom_point() +xlab('date')
-# no clearly trend
-
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = hosp_patients, 
-                     group=hum_cat, 
-                     color=hum_cat)) +geom_point() +xlab('date')
-# cannot see the trend clearly
-
-```
-
-# fit a simple lm on hospital admission using numerical categorical data
-```{r}
-lm2=lm(hosp_patients~., data=data_cat[, c(2,3,5,6,11,12, 25, 26, 27, 28)])
-summary(lm2)
-# when temperature is higher than 9 degrees, it has an effect on the COVID hospital admission.
-# wind does not have an impact on hospital admission
-# increasing of humidity causes decreasing of hospital admission.
-# precipitation does not have large effect on hospital admission
-```
-
 
 ```{r}
-par(mfrow=c(1,1))
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = icu_patients, 
-                     group=temp_cat, 
-                     color=temp_cat)) +geom_point() +xlab('date')
-# clearly hot temperature results lower COVID hospital patients
-
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = icu_patients, 
-                     group=wind_cat, 
-                     color=wind_cat)) +geom_point() +xlab('date')
-# no clearly trend
-
-ggplot(data_cat, aes(x = seq(1, 485, 1),
-                     y = icu_patients, 
-                     group=hum_cat, 
-                     color=hum_cat)) +geom_point() +xlab('date')
-# cannot see the trend clearly
+write.csv(data, 'data_daily_generate.csv',row.names = FALSE)
 ```
 
-# fit a simple lm on ICU beds using numerical and categorical data
+
+# aggregating daily data into weekly data
 ```{r}
-lm3=lm(icu_patients~., data=data_cat[, c(2,3,4,6,11,12, 25, 26, 27, 28)])
-summary(lm3)
-# new cases, new deaths, stringency, transition, resident have significant effect on ICU beds
-# as humidity increases, it causes a large amount decreasing of ICU beds
-# for weather variables, not sure how to explain.
+week_data=function(df){
+  df$week <- cut(as.Date(df$date), "week")       
+  
+  table=df%>%group_by(week) %>%
+  summarize(newcases = mean(new_cases),           
+            newdeaths=mean(new_deaths),    
+            icu=mean(icu_patients), 
+            hospital=mean(hosp_patients),
+            stringency=mean(stringency_index),
+            temperature=mean(temp),
+            humidity=mean(humidity),
+            precipitation=mean(precip),
+            windspeed=mean(windspeed),
+            transit=mean(transit_stations),
+            resident=mean(residential)
+            )
+  return(table)
+}
+
 ```
 
+```{r}
+write.csv(data, 'data_weekly_generate.csv',row.names = FALSE)
+```
