@@ -66,59 +66,10 @@ return(df2)
 }
 ```
 
-# aggregating daily data into weekly data
-```{r}
-week_data=function(df){
-  df$week <- cut(as.Date(df$date), "week")       
-  
-  table=df%>%group_by(week) %>%
-  summarize(newcases = mean(new_cases),           
-            newdeaths=mean(new_deaths),    
-            icu=mean(icu_patients), 
-            hospital=mean(hosp_patients),
-            stringency=mean(stringency_index),
-            temperature=mean(temp),
-            humidity=mean(humidity),
-            precipitation=mean(precip),
-            windspeed=mean(windspeed),
-            transit=mean(transit_stations),
-            resident=mean(residential)
-            )
-  return(table)
-}
-
-```
-
-
-# Selecting training data by date
-data from 2021-01-01 to 2022-03-31
-Extracting data from 2021-01-01 to 2022-03-31 as training data, and save it into data file.
-```{r}
-newdata_train=select_date('2021-01-01', '2022-03-31')
-newdata_train=na_interpolation(newdata_train)
-newdata_train1=week_data(newdata_train)
-
-```
-
-# Selecting testing data by date
-data from 2021-01-01 to 2022-04-31
-Extracting data from 2021-01-01 to 2022-04-31 as testing data, and save it into data file.
-```{r}
-newdata_test=select_date('2021-01-01', '2022-04-31')
-newdata_test=na_interpolation(newdata_test)
-newdata_test1=week_data(newdata_test)
-```
-
-```{r}
-write.csv(newdata_train1, 'training_data.csv',row.names = FALSE)
-write.csv(newdata_test1, 'test_data.csv',row.names = FALSE)
-```
 
 # save daily data (use as train-test in the model)
 ```{r}
 newdata=select_date('2021-01-01', '2022-04-31')
-#newdata$icu_patients=na.interp(newdata$icu_patients)
-#newdata$hosp_patients=na.interp(newdata$hosp_patients)
 write.csv(newdata, 'new_data.csv',row.names = FALSE)
 
 
