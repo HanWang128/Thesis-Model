@@ -145,29 +145,15 @@ write.csv(data, 'data_daily_generate.csv',row.names = FALSE)
 # aggregating daily data into weekly data
 ```{r}
 week_data=function(df){
-   data$week=week(data$date)
-   data %>% group_by(week)%>% summarize(newcases = mean(new_cases), newdeaths=mean(new_deaths),    
-            icu=mean(icu_patients), 
-            hospital=mean(hosp_patients),
-            stringency=mean(stringency_index),
-            temperature=mean(temp),
-            humidity=mean(humidity),
-            precipitation=mean(precip),
-            windspeed=mean(windspeed),
-            transit=mean(transit_stations),
-            resident=mean(residential)
-            )
-  return(table)
+   data$week=cut(as.Date(data$date), "week", start.on.monday = TRUE)
+   t1=ddply(data, .(week), colwise(mean, 2:12))
+  return(t1)
   #print(table)
 }
 
 weekdata=week_data(data)
-#group_by(table$week)%>%summarize(newcases = mean(table$new_cases))
-
-#data1<- as.xts(data$new_cases,order.by=as.Date(data$date))
-#weekly <- apply.weekly(data,sum)
 ```
 
 ```{r}
-write.csv(week_data, 'data_weekly_generate.csv',row.names = FALSE)
+write.csv(weekdata, 'data_weekly_generate.csv',row.names = FALSE)
 ```
