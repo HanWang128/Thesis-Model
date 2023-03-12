@@ -1,0 +1,227 @@
+---
+title: "Time series for ICU patients"
+---
+```{r,include=FALSE}
+library(plyr)
+library(imputeTS)
+library(dplyr)
+library(tidyverse)
+library(forcats)
+library(stringr)
+library(base)
+library(sf)
+library(scales)
+library(lubridate)
+library(aTSA)
+library(tseries)
+library(forecast)
+library(CADFtest)
+library(vars)
+library(urca)
+library(lattice)
+library(urca)
+library(ggplot2)
+library(MASS)
+library(tidymodels)
+library(rugarch)
+library(garchmodels)
+library(rmgarch)
+library(modeltime)
+library(timetk)
+```
+
+# read data files
+```{r}
+weekly1=read.csv('data_weekly_generate.csv')
+
+#weekly1$school_open=ifelse(weekly1$school==1, 1, 0)
+#weekly1$school_close=ifelse(weekly1$school==1, 0, 1)
+```
+
+
+# split the data into train and test sets
+we use 80% of data as training dataset, 20% of data as test dataset
+```{r}
+cut_off=0.8*length(weekly1$new_cases)
+var_train=weekly1[1:130,]
+var_test=weekly1[131:length(weekly1$new_cases),]
+
+#arima_train=ts_df[1:cut_off,]
+#arima_test=ts_df[cut_off:length(icu.ts),]
+```
+
+# ICU admission VAR model
+The VAR model selects lag=1, which means the values of factors in week t-1 have impact on value in week t of the response.
+```{r}
+var_icu=function(df, p, n){
+  fit_var<-VAR(df,type="const",p=p) 
+  print(AIC(fit_var))
+  print(summary(fit_var))
+  print(causality(fit_var, cause=colnames(df)[2:length(colnames(df))]))
+  pred_var <- predict(fit_var, n.ahead = n)
+  icu_forecast<-ts(pred_var$fcst$icu[,1],start=2022)
+  return(icu_forecast)
+}
+```
+
+```{r}
+################### full model 
+m1=var_train[, c(4, 3,6,7,8,9,10,11,12, 13, 14, 15)]
+
+VARselect(m1,type="const", lag.max=10) 
+icu_fore1=var_icu(m1,3, 7)
+icu_fore1
+# there is causality on hospital admission
+
+#when no cases included,
+# p=6 aic= 4839.355, no
+# p=8 based on VAR aic=3901.502,no
+# p=4, 5223.174, no
+
+#when all variables are included, not too accurate
+# p=8 based on VAR, aic=4588.502, no
+# p=6 aic=6989.693, ok
+
+# cases can be removed
+
+```
+
+#some model
+#hospital t-1 pos, t-3 neg
+#temperature t-1, t-2, t-3 neg
+#cases_diff t-1 pos, t-4, neg
+#death t-1 neg, t-2 pos, t-3 pos
+#stringency t-1 pos, 
+#precip t-1 pos
+#school t-1 neg, t-2 pos, t-3 neg 
+#Residual standard error: 42.62 on 20 degrees of freedom
+#Multiple R-Squared: 0.9984,	Adjusted R-squared: 0.996 
+#F-statistic: 414.9 on 30 and 20 DF,  p-value: < 2.2e-16 
+
+```{r}
+######################## remove humidity, precip, wind, lag=5 week
+m2<-var_train[, c(4, 2,3,6,7,9,10,11,12,13,14,15)]
+VARselect(m2,type="const", lag.max=10) 
+icu_fore2=var_icu(m2, 3, 4)
+icu_fore2
+
+# only remove humidity 8,  only first 2 weeks prediction is ok
+# aic 3063.869, p=9 no var
+# aic 6978.27, p=3 ok..
+# aic 6869.404, p=4 nah
+
+# only remove precip 9, only first 2 weeks prediction is ok
+# aic 2821.184, p=9 no based on var
+# aic 7563.258, p=2 no
+# aic 7491.439, p=3 ok
+# aic 7367.757, p=4 no
+
+#only remove wind 10
+# aic=2917.791, p=9 based on var, no
+# aic 6361.688, p=6, no
+# aic 6902.484, p=3, no
+
+```
+
+```{r}
+######################## remove humidity, precip, wind, cases
+m3<-var_train[, c(4,3,6,7,8,9,11,12,13,14,15)]
+VARselect(m3,type="const", lag.max=10) 
+icu_fore3=var_icu(m3, 7, 4)
+icu_fore3
+# remove cases, hum, precip, wind together
+#aic 3374.73, p=1 based on VAR, #ok
+#aic 3139.184, p=3, ok
+#aic 3165.014, p=2, ok
+#aic 3126.215, p=4
+
+#only remove cases and humidity
+# aic  4744.387, p=1 var, no
+# aic  4513.597, p=3 ok
+# aic 4503.623, p=4 no
+
+#only remove cases and precip
+# aic 5011.467, p=1 var, no
+# aic 4781.223, p=3, no
+# aic 4745.873, p=4, no
+
+#only remove cases and wind
+# aic  2901.553, p=9, var, no
+# aic  4408.515, p=4, no
+# aic  4452.749, p=3, ok
+# aic  4469.335, p=2, ok
+
+```
+
+
+# computing model errors
+```{r}
+mape=function(test, forecast, n){
+  mape1=mean(abs(((test-forecast)/test)*100))
+  return(mape1)
+}
+
+mse=function(test, forecast, n){
+  mse1=mean((test-forecast)^2)
+  return(mse1)
+}
+
+rmse=function(test, forecast, n){
+  rmse1=sqrt(mean((test-forecast)^2))
+  return(rmse1)
+}
+
+mae=function(test, forecast, n){
+  mae1=mean(abs((test-forecast)))
+  return(mae1)
+}
+```
+
+# comparing models for hospital admission
+```{r}
+mse1=mse(var_test$icu_patients[1:4], icu_fore1, 4)
+mse2=mse(var_test$icu_patients[1:4], icu_fore2, 4)
+mse3=mse(var_test$icu_patients[1:4], icu_fore3, 4)
+#mse5=mse(var_test$hosp_diff[1:4], hosp_fore5, 4)
+
+rmse1=rmse(var_test$icu_patients[1:4], icu_fore1, 4)
+rmse2=rmse(var_test$icu_patients[1:4], icu_fore2, 4)
+rmse3=rmse(var_test$icu_patients[1:4], icu_fore3, 4)
+
+mae1=mae(var_test$icu_patients[1:4], icu_fore1, 4)
+mae2=mae(var_test$icu_patients[1:4], icu_fore2, 4)
+mae3=mae(var_test$icu_patients[1:4], icu_fore3, 4)
+
+mape1=mape(var_test$icu_patients[1:4], icu_fore1, 4)
+mape2=mape(var_test$icu_patients[1:4], icu_fore2, 4)
+mape3=mape(var_test$icu_patients[1:4], icu_fore3, 4)
+
+#AIC() need AIC value
+c(mape1,mape2, mape3)
+c(rmse1,rmse2, rmse3)
+c(mae1,mae2, mae3)
+```
+
+#not useful
+```{r}
+h=4
+s=120
+df=weekly1[, c(5,2,3,6,7,8,9,10,11,12,13,14,15)]
+
+error=c()
+prediction_vector <- vector(mode="numeric",length=length(df$hosp_patients))
+for(k in s:(length(df$hosp_patients)-h)){
+  var_df=df[1:k,]
+  result=VARselect(var_df,type="const", lag.max=10) 
+  print(result)
+  hosp_fore=VAR(var_df, p=8,type='const')
+  #print(summary(hosp_fore))
+  predict_out=predict(hosp_fore, n.head=h)
+  predict=predict_out[[1]][1]$hosp_patients[h]
+  error=c(error, df$hosp_patients[k+h]-predict)
+  prediction_vector[k+h]=predict
+}
+
+prediction_vector 
+
+```
