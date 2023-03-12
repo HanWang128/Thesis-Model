@@ -38,6 +38,16 @@ covid_variant=read.csv('COVID_varianten.csv' ,sep=';')
 fulldata <- read.csv('owid_data.csv')
 
 weatherNL=read.csv('weatherNL.csv')
+
+School=read.csv('school_closing.csv')
+
+Work=read.csv('workplace_closing.csv')
+
+Stayhome=read.csv('stay_at_home.csv')
+
+Events=read.csv('cancel_public_events.csv')
+
+Transport=read.csv('close_public_transport.csv')
 ```
 
 ## Generating data
@@ -60,18 +70,44 @@ weather=weatherNL %>% filter(datetime>=start_date)%>%filter(datetime<= end_date)
 #aggregating data together
 NLdata1 <- fulldata %>%filter(location=="Netherlands") %>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select(date, new_cases, new_deaths, icu_patients, hosp_patients)
 
-df2 <- join_all(list(NLdata1,stringency,weather, mobility), by='date', type='left')
+School=School[,-c(1,2,4,5,6)]%>%filter(country_name=='Netherlands')%>%
+  pivot_longer(!country_name, names_to = 'date', values_to='school',  names_prefix = "X")
+School$date=as.Date(School$date, "%d%b%Y")
+School=School %>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select( c(date, school))
 
-return(df2)
+Work=Work[,-c(1,2,4,5,6)]%>%filter(country_name=='Netherlands')%>%
+  pivot_longer(!country_name, names_to = 'date', values_to='work',  names_prefix = "X")
+Work$date=as.Date(Work$date, "%d%b%Y")
+Work=Work %>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select( c(date, work))
+
+Stayhome=Stayhome[,-c(1,2,4,5,6)]%>%filter(country_name=='Netherlands')%>%
+  pivot_longer(!country_name, names_to = 'date', values_to='stayhome',  names_prefix = "X") 
+Stayhome$date=as.Date(Stayhome$date, "%d%b%Y")
+Stayhome=Stayhome%>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select(c(date, stayhome))
+
+Events=Events[,-c(1,2,4,5,6)]%>%filter(country_name=='Netherlands')%>%
+  pivot_longer(!country_name, names_to = 'date', values_to='events',  names_prefix = "X")
+Events$date=as.Date(Events$date, "%d%b%Y")
+Events= Events%>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select( c(date, events))
+
+Transport=Transport[,-c(1,2,4,5,6)]%>%filter(country_name=='Netherlands')%>%
+  pivot_longer(!country_name, names_to = 'date', values_to='transport',  names_prefix = "X")
+Transport$date=as.Date(Transport$date, "%d%b%Y")
+Transport=Transport %>% filter(date >= start_date)%>%filter(date<= end_date)%>%dplyr::select( c(date,transport))
+
+policy=join_all(list(School, Work, Stayhome, Events,Transport), by='date', type='left')
+
+df2 <- join_all(list(NLdata1,stringency,weather, policy), by='date', type='left')
+
+return( df2)
 }
 ```
 
 
 # save daily data (use as train-test in the model)
 ```{r}
-newdata=select_date('2021-01-01', '2022-04-31')
+newdata=select_date('2020-04-01', '2022-11-10')
 write.csv(newdata, 'new_data.csv',row.names = FALSE)
-
 
 ```
 
