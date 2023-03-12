@@ -25,12 +25,13 @@ library(fpp2)
 
 # read file
 ```{r}
-data=read.csv('new_data.csv')
+data_new=read.csv('new_data.csv')
+data_new
 ```
 
 # Data exploration
 ```{r}
-describe(data)
+describe(data_new)
 ```
 
 There are 12 variables in the data with 485 observations. Including 1 date variable, 2 response variables, and 9 predictors. All variables are numeric type except variable 'date'. 
@@ -44,37 +45,36 @@ There are 12 variables in the data with 485 observations. Including 1 date varia
 8. humidity: daily humidity
 9. precipitation: the amount of rains per day
 10. winds peed: daily winds peed
-11. transit_stations:  number of visitors to transit stations has changed compared to baseline days (baseline: median value for the 5‑week period from January 3 to February 6, 2020)
-12: residential: change in duration of time spent at home. People already spend a lot of time at home, so changes in Residential are likely to be smaller.
-
-
-
+11. school: categorical data, 0=no measure, 1=recommend closing, 2=require partial closing, 3=require closing at all level
 
 
 ## checking missingness
 ```{r}
-sum(is.na(data))
-sum(is.na(data$icu_patients))
-sum(is.na(data$hosp_patients))
+sum(is.na(data_new))
+sum(is.na(data_new$icu_patients))
+sum(is.na(data_new$hosp_patients))
+sum(is.na(data_new$new_deaths))
+sum(is.na(data_new$temp))
+sum(is.na(data_new$humidity))
+sum(is.na(data_new$precip))
+sum(is.na(data_new$windspeed))
 ```
-There are 18 missing values in the data, locate in ICU patients and Hospital patients columns. (The government website does not have COVID records for some days during 2021- 2022)
+There are 618 missing values in the data, locate in ICU patients and Hospital patients columns and other variables. (The government website does not have COVID records for some days during 2021- 2022)
 
 ## correlations 
 ```{r}
 # remove the missing values
 
-pairs(na.omit(data[, 2:6]))
+pairs(na.omit(data_new[, 2:15]))
 
-cor(na.omit(data[, 2:12]))
+corrplot(cor(na.omit(data_new[, 2:15])), method = "circle", tl.cex = 0.5) 
 
-corrplot(cor(na.omit(data[, 2:12])), method = "circle",
-        title = "method = 'circle'") 
 ```
 After removing the missing values, we plot the correlation graph
 For hospital admission
 1.hospital admission and humidity,hospital admission and wind speed, hospital admission and precipitation have small correlation less than 0.1
-2.hospital admission and new deaths, hospital admission and resident are highly positive correlated 
-3.hospital admission and temperature, hospital admission and transit are highly negative correlated
+2.hospital admission and new deaths, school, stayhome, ICU and stringency are highly positive correlated 
+3.hospital admission and temperature are highly negative correlated
 
 for hospital admission: fit var model including all variables, comparing to the var model without humidity, precipitation, and wind speed.
 
@@ -82,17 +82,13 @@ for hospital admission: fit var model including all variables, comparing to the 
 
 For ICU admission
 1.ICU admission and humidity, ICU admission and precipitation, ICU and wind speed have small correlation less than 0.1.
-2.ICU admission and new deaths, ICU admission and stringency, ICU admission and resident are highly positive correlated 
-3.ICU admission and temperature, ICU admission and transit are highly negative correlated
+2.ICU admission and new deaths, hospital admission, stringency,school, stayhome, events, transport are highly positive correlated 
+3.ICU admission and temperature are highly negative correlated
 
 for ICU admission: fit var model including all variables, comparing to the var model without humidity, precipitation and wind speed.
 
 
-new deaths highly positive correlated to stringency_index, and residential. Negative correlated to temperature and public transition.
-
-strigency_index increases, residential increases, transition decreases. (temperature has opposite relation)
-
-transit and residential as highly negative correlated.
+new deaths highly positive correlated to stringency_index, stayhome, events and school. Negative correlated to temperature.
 
 Since the data contains missing value, we will use interpolation methods to replace the NA values.
 
@@ -100,27 +96,30 @@ Since the data contains missing value, we will use interpolation methods to repl
 # Plots
 ```{r}
 par(mfrow=c(2,2))
-plot(data$new_cases) 
+plot(data_new$new_cases) 
 # 2022-02-07 has 380399 cases, (outlier, remove and graph again) volatity
 # 2022-01-17 and 2022-02-22 have 0 and 2 new cases, we treat them as outliers. 
 # 2021-09-11 has 22 new cases, previous day and day after have over 2800 cases, treat it as outliers.
 
-plot(data$new_deaths)
-boxplot(data$new_deaths)
+plot(data_new$new_deaths)
+boxplot(data_new$new_deaths)
 # more deaths at the beginning 
 
-plot(data$icu_patients)
-boxplot(data$icu_patients) # no outliers
-plot(data$hosp_patients)
-boxplot(data$hosp_patients) #no outliers
+plot(data_new$icu_patients)
+boxplot(data_new$icu_patients) # no outliers
+plot(data_new$hosp_patients)
+boxplot(data_new$hosp_patients) #no outliers
 
-plot(data$stringency_index) 
-plot(data$temp)
-plot(data$humidity)
-plot(data$precip)
-plot(data$windspeed)
-plot(data$transit_stations)
-plot(data$residential)
+plot(data_new$stringency_index) 
+plot(data_new$temp)
+plot(data_new$humidity)
+plot(data_new$precip)
+plot(data_new$windspeed)
+plot(data_new$school)
+plot(data_new$work)
+plot(data_new$stayhome)
+plot(data_new$events)
+plot(data_new$transport)
 # ICU, hosp, stringency, residential trends are similar, transition has opposite trend.
 
 
@@ -128,30 +127,49 @@ plot(data$residential)
 
 for the outliers in new cases variable, we replace it using na.interp()
 ```{r}
-data$new_cases=ifelse(data$new_cases<50, NA,ifelse(data$new_cases>300000, NA, data$new_cases))
+data_new$new_cases=ifelse(data_new$new_cases<50, NA,ifelse(data_new$new_cases>300000, NA, data_new$new_cases))
 
-data$new_cases=na.interp(data$new_cases)
-data$icu_patients=na.interp(data$icu_patients)
-data$hosp_patients=na.interp(data$hosp_patients)
+data_new$new_cases=na.interp(data_new$new_cases)
+data_new$icu_patients=na.interp(data_new$icu_patients)
+data_new$hosp_patients=na.interp(data_new$hosp_patients)
+data_new$new_deaths=na.interp(data_new$new_deaths)
 
-sum(is.na(data))
+data_new$temp=na.interp(data_new$temp)
+data_new$humidity=na.interp(data_new$humidity)
+data_new$precip=na.interp(data_new$precip)
+data_new$windspeed=na.interp(data_new$windspeed)
+sum(is.na(data_new))
 ```
 
 ```{r}
-write.csv(data, 'data_daily_generate.csv',row.names = FALSE)
+write.csv(data_new, 'data_daily_generate.csv',row.names = FALSE)
 ```
 
 
 # aggregating daily data into weekly data
 ```{r}
 week_data=function(df){
-   data$week=cut(as.Date(data$date), "week", start.on.monday = TRUE)
-   t1=ddply(data, .(week), colwise(mean, 2:12))
+   df$week=cut(as.Date(df$date), "week", start.on.monday = TRUE)
+   t1=ddply(df, .(week), colwise(mean, 2:15))
   return(t1)
   #print(table)
 }
-
-weekdata=week_data(data)
+weekdata=week_data(data_new)
+weekdata$school=ifelse(weekdata$school<1, 0, 
+                       ifelse(weekdata$school<2, 1,
+                       ifelse(weekdata$school<3, 2, weekdata$school)))
+weekdata$work=ifelse(weekdata$work<1, 0, 
+                       ifelse(weekdata$work<2, 1,
+                       ifelse(weekdata$work<3, 2, weekdata$work)))
+weekdata$stayhome=ifelse(weekdata$stayhome<1, 0, 
+                       ifelse(weekdata$stayhome<2, 1,
+                       ifelse(weekdata$stayhome<3, 2, weekdata$stayhome)))
+weekdata$events=ifelse(weekdata$events<1, 0, 
+                       ifelse(weekdata$events<2, 1,
+                       ifelse(weekdata$events<3, 2, weekdata$events)))
+weekdata$transport=ifelse(weekdata$transport<1, 0, 
+                       ifelse(weekdata$transport<2, 1,
+                       ifelse(weekdata$transport<3, 2, weekdata$transport)))                     
 ```
 
 ```{r}
